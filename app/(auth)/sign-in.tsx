@@ -14,7 +14,6 @@ import {
   SignInFirstFactor,
 } from '@clerk/types';
 import { Link, useRouter } from 'expo-router';
-import OAuthButtons from '@/components/OAuthButtons';
 import { OtpInput } from 'react-native-otp-entry';
 
 export default function Page() {
@@ -156,10 +155,6 @@ export default function Page() {
       <Text style={styles.subtitle}>
         Welcome back! Please sign in to continue
       </Text>
-
-      <OAuthButtons />
-
-      <Text style={styles.orSeparator}>or</Text>
 
       <Text style={styles.label}>Email address</Text>
       <TextInput

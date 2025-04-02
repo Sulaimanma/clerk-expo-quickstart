@@ -1,5 +1,5 @@
-import React from 'react';
-import { useClerk, useUser } from '@clerk/clerk-expo';
+import React, { useEffect, useState } from 'react';
+import { useAuth, useClerk, useUser } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import {
   StyleSheet,
@@ -8,17 +8,66 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Alert,
 } from 'react-native';
 
 export default function Page() {
   const { user } = useUser();
   const clerk = useClerk();
   const router = useRouter();
+  const { getToken } = useAuth();
+  const [customToken, setCustomToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [expiresIn, setExpiresIn] = useState<string>('');
 
   async function handleSignOut() {
     await clerk.signOut();
     router.replace('/');
   }
+
+  const getCustomToken = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Prepare the payload for our local server
+      const payload: {
+        user_id: string;
+        expires_in_seconds?: number;
+      } = {
+        user_id: user?.id || '',
+      };
+      
+      // Add expiration if provided
+      if (expiresIn && !isNaN(parseInt(expiresIn))) {
+        payload.expires_in_seconds = parseInt(expiresIn);
+      }
+      
+      // Call our local Express server instead of Clerk API directly
+      console.log(`${process.env.EXPO_PUBLIC_CLERK_CUSTOM_SERVER}/generate-token`)
+      const response = await fetch(`${process.env.EXPO_PUBLIC_CLERK_CUSTOM_SERVER}/generate-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get custom token');
+      }
+      
+      // The token could be in data.token or just data.id depending on Clerk's response format
+      setCustomToken(data.token);
+      Alert.alert('Success', 'Custom token generated successfully!');
+    } catch (error) {
+      console.error('Error getting custom token:', error);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to get custom token');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (user === undefined) {
     return <Text>Loading...</Text>;
@@ -28,8 +77,12 @@ export default function Page() {
     return <Text>Not signed in</Text>;
   }
 
+  useEffect(()=>{
+    getCustomToken()
+  },[])
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{paddingBottom:200}}>
       <View style={styles.header}>
         <Image source={{ uri: user.imageUrl }} style={styles.profileImage} />
         <Text style={styles.name}>{user.fullName || 'User'}</Text>
@@ -54,12 +107,22 @@ export default function Page() {
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
         <Text style={styles.signOutButtonText}>Sign Out</Text>
       </TouchableOpacity>
-
       <TouchableOpacity
         style={styles.backButton}
-        onPress={() => router.push('/')}
+        onPress={() => {
+          if (!customToken) {
+            Alert.alert("No Token", "Please generate a custom token first");
+            return;
+          }
+          // Include the userId as a query parameter along with the customToken
+          const baseUrl = "http://canstar.localhost:3001/";
+          const queryParams = `?customToken=${customToken}&userId=${user?.id}`;
+          const encodedUrl = encodeURIComponent(`${baseUrl}${queryParams}`);
+          
+          router.push(`/(home)/web-view?url=${encodedUrl}`);
+        }}
       >
-        <Text style={styles.backButtonText}>Back</Text>
+        <Text style={styles.backButtonText}>webview CTA</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -113,6 +176,36 @@ const styles = StyleSheet.create({
   infoValue: {
     color: 'gray',
   },
+  inputContainer: {
+    backgroundColor: '#fff',
+    marginTop: 10,
+    marginHorizontal: 20,
+    padding: 15,
+    borderRadius: 8,
+  },
+  inputLabel: {
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  input: {
+    height: 40,
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+  },
+  tokenButton: {
+    backgroundColor: '#4a90e2',
+    padding: 15,
+    borderRadius: 8,
+    margin: 20,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   signOutButton: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     padding: 15,
@@ -127,6 +220,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     alignItems: 'center',
+    marginBottom: 10,
     marginTop: 15,
   },
   backButtonText: {

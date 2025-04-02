@@ -135,11 +135,6 @@ export default function Page() {
       <Text style={styles.subtitle}>
         Welcome! Please fill in the details to get started.
       </Text>
-
-      <OAuthButtons />
-
-      <Text style={styles.orSeparator}>or</Text>
-
       <Text style={styles.label}>Email address</Text>
       <TextInput
         style={styles.input}
