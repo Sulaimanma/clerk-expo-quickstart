@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 
 export default function Page() {
@@ -30,6 +30,17 @@ export default function Page() {
           </TouchableOpacity>
         </Link> : null
       }
+
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => {
+                const baseUrl = "http://canstar.localhost:3001/";
+                router.push(`/(home)/web-view?url=${baseUrl}`);
+              }}
+
+            >
+              <Text style={styles.buttonText}>webview CTA</Text>
+            </TouchableOpacity>
     </View>
   );
 }

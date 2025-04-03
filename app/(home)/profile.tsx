@@ -20,6 +20,12 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false);
   const [expiresIn, setExpiresIn] = useState<string>('');
 
+  useEffect(() => {
+    if (user) {
+      getCustomToken();
+    }
+  }, [user]);
+
   async function handleSignOut() {
     await clerk.signOut();
     router.replace('/');
@@ -29,12 +35,16 @@ export default function Page() {
     try {
       setIsLoading(true);
       
+      if (!user?.id) {
+        throw new Error('User ID not available');
+      }
+      
       // Prepare the payload for our local server
       const payload: {
         user_id: string;
         expires_in_seconds?: number;
       } = {
-        user_id: user?.id || '',
+        user_id: user.id,
       };
       
       // Add expiration if provided
@@ -76,10 +86,6 @@ export default function Page() {
   if (user === null) {
     return <Text>Not signed in</Text>;
   }
-
-  useEffect(()=>{
-    getCustomToken()
-  },[])
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{paddingBottom:200}}>
